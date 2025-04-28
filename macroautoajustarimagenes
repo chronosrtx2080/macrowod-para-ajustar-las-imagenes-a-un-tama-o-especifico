@@ -1,0 +1,55 @@
+Sub ConvertirAInlineYOrganizarTodasLasImagenes()
+    Dim shp As Shape
+    Dim img As InlineShape
+    Dim anchoImagen As Single, altoImagen As Single
+    Dim anchoPagina As Single, margenIzquierdo As Single, margenDerecho As Single
+    Dim espacioDisponible As Single, espacioOcupado As Single
+    Dim espacioEntreImagenes As Single
+    Dim i As Long
+
+    ' Configuración de tamaño y espaciado
+    altoImagen = CentimetersToPoints(5) ' Alto de las imágenes
+    anchoImagen = CentimetersToPoints(4) ' Ancho de las imágenes
+    espacioEntreImagenes = 0 ' Sin espacio entre imágenes
+
+    ' Obtener dimensiones de la página
+    anchoPagina = ActiveDocument.PageSetup.PageWidth
+    margenIzquierdo = ActiveDocument.PageSetup.LeftMargin
+    margenDerecho = ActiveDocument.PageSetup.RightMargin
+    espacioDisponible = anchoPagina - margenIzquierdo - margenDerecho
+    espacioOcupado = 0
+
+    ' Convertir imágenes flotantes a InlineShapes (de atrás hacia adelante)
+    For i = ActiveDocument.Shapes.Count To 1 Step -1
+        Set shp = ActiveDocument.Shapes(i)
+        If shp.Type = msoPicture Then
+            ' Omitir imágenes menores de 3x3 cm
+            If shp.Height >= CentimetersToPoints(3) And shp.Width >= CentimetersToPoints(3) Then
+                shp.ConvertToInlineShape
+            End If
+        End If
+    Next i
+
+    ' Procesar todas las imágenes en línea
+    For Each img In ActiveDocument.InlineShapes
+        If img.Type = wdInlineShapePicture Then
+            ' Omitir imágenes menores de 3x3 cm
+            If img.Height >= CentimetersToPoints(3) And img.Width >= CentimetersToPoints(3) Then
+                ' Ajustar tamaño
+                img.LockAspectRatio = msoFalse
+                img.Height = altoImagen
+                img.Width = anchoImagen
+
+                ' Organizar en la misma fila
+                If espacioOcupado + img.Width > espacioDisponible Then
+                    ' Si no cabe, iniciar una nueva fila
+                    ActiveDocument.Content.Paragraphs.Last.Range.InsertParagraphAfter
+                    espacioOcupado = 0
+                End If
+                ' Insertar en la fila actual
+                espacioOcupado = espacioOcupado + img.Width + espacioEntreImagenes
+            End If
+        End If
+    Next img
+End Sub
+
